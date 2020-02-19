@@ -20,8 +20,11 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RequireAuth } from './components/RequireAuth';
 import { CreationFlowStatus } from './constants';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { initServiceWorker } from './serviceWorker';
 
 initializeIcons(undefined, { disableWarnings: true });
+
+initServiceWorker().then(_ => console.log('initalized service worker'));
 
 const Onboarding = React.lazy(() => import('./Onboarding'));
 // eslint-disable-next-line react/display-name
