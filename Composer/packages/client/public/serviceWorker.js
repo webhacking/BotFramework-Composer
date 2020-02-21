@@ -1,19 +1,14 @@
 self.addEventListener('install', ev => {
-  ev.waitUntil(async function() {
-    await new Promise(resolve => {
+  ev.waitUntil(
+    new Promise(resolve => {
       console.log('installing...');
       resolve();
-    });
-    console.log('installed...');
-  });
+    })
+  );
+  console.log('installed');
 });
 
 self.addEventListener('fetch', ev => {
-  ev.waitUntil(async function() {
-    await new Promise(resolve => {
-      console.log(ev);
-      console.log(ev.request);
-      resolve();
-    });
-  });
+  console.log('fetching ', ev.request.url);
+  ev.respondWith(fetch(ev.request));
 });

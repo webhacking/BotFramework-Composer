@@ -1,9 +1,13 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT License.
+
 export async function initServiceWorker() {
   if ('serviceWorker' in navigator) {
     console.log('Service workers enabled. Registering...');
     const { serviceWorker } = navigator;
     try {
       const registration = await serviceWorker.register('/serviceWorker.js');
+      await registration.update();
       console.log('Registration successful: ', registration);
       createButtonAndHookUpEvent(registration);
     } catch (e) {
