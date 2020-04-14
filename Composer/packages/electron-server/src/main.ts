@@ -7,34 +7,25 @@ import { mkdirp } from 'fs-extra';
 import { app, BrowserWindow } from 'electron';
 import fixPath from 'fix-path';
 
+import { isDevelopment } from './utility/env';
+import { isWindows, isMac } from './utility/platform';
 import { getUnpackedAsarPath } from './utility/getUnpackedAsarPath';
-import log from './utility/logger';
-const error = log.extend('error');
+import ElectronWindow from './electronWindow';
+import logger, { log } from './utility/logger';
+const error = logger.extend('error');
 
-const isDevelopment = process.env.NODE_ENV === 'development';
+let deeplinkingUrl;
 
 function main() {
   log('Starting electron app');
 
-  // Create the browser window.
-  const browserWindowOptions: Electron.BrowserWindowConstructorOptions = {
-    width: 800,
-    height: 600,
-    webPreferences: {
-      nodeIntegration: false,
-    },
-    show: false,
-  };
-  if (process.platform === 'linux' && !isDevelopment) {
-    // workaround for broken .AppImage icons since electron-builder@21.0.1 removed .AppImage desktop integration
-    // (https://github.com/electron-userland/electron-builder/releases/tag/v21.0.1)
-    browserWindowOptions.icon = join(getUnpackedAsarPath(), 'resources/composerIcon_1024x1024.png');
-  }
-  const win = new BrowserWindow(browserWindowOptions);
+  const win = ElectronWindow.getInstance().browserWindow;
 
   // and load the index.html of the app.
   const CONTENT_URL = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
   log('Loading project from: ', CONTENT_URL);
+
+  log(`THE TRUTH IS ${deeplinkingUrl}`);
 
   win.loadURL(CONTENT_URL);
   win.maximize();
@@ -52,21 +43,46 @@ async function createAppDataDir() {
 
 async function run() {
   fixPath(); // required PATH fix for Mac (https://github.com/electron/electron/issues/5626)
+
+  const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
+  if (gotTheLock) {
+    app.on('second-instance', (e, argv) => {
+      log('Inside second instance');
+      if (isWindows()) {
+        deeplinkingUrl = argv.slice(1);
+      }
+      if (ElectronWindow.isBrowserWindowCreated) {
+        const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;
+        if (browserWindow.isMinimized()) {
+          browserWindow.restore();
+        }
+        browserWindow.focus();
+      }
+    });
+  } else {
+    app.quit();
+    return;
+  }
+
+  app.on('activate', () => {
+    main();
+  });
+
   // Quit when all windows are closed.
-  app.on('window-all-closed', () => {
+  app.on('window-all-closed', function() {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    if (process.platform !== 'darwin') {
+    if (isMac()) {
       app.quit();
     }
   });
 
-  app.on('activate', () => {
-    // On OS X it's common to re-create a window in the app when the
-    // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) {
-      main();
-    }
+  app.on('will-finish-launching', function() {
+    app.on('open-url', function(event, url) {
+      event.preventDefault();
+      deeplinkingUrl = url;
+      log(`Locked and loaded: ${deeplinkingUrl}`);
+    });
   });
 
   log('Waiting for app to be ready...');
