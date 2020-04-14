@@ -20,7 +20,7 @@ import { getAuthProvider } from './router/auth';
 import { apiRouter } from './router/api';
 import { BASEURL } from './constants';
 import { attachLSPServer } from './utility/attachLSP';
-import log from './logger';
+import { log } from './logger';
 import pluginLoader from './services/pluginLoader';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -112,20 +112,6 @@ export async function start(pluginDir?: string) {
 
   const port = process.env.PORT || 5000;
   let server;
-  await new Promise(resolve => {
-    server = app.listen(port, () => {
-      if (process.env.NODE_ENV === 'production') {
-        log(`\n\nComposer now running at:\n\nhttp://localhost:${port}\n`);
-      }
-      resolve();
-    });
-  });
-
-  const wss: ws.Server = new ws.Server({
-    noServer: true,
-    perMessageDeflate: false,
-  });
-
   const { lgImportResolver, luImportResolver, staticMemoryResolver } = BotProjectService;
 
   function launchLanguageServer(socket: rpc.IWebSocket) {
@@ -144,25 +130,37 @@ export async function start(pluginDir?: string) {
     server.start();
   }
 
-  attachLSPServer(wss, server, '/lg-language-server', webSocket => {
-    // launch language server when the web socket is opened
-    if (webSocket.readyState === webSocket.OPEN) {
-      launchLanguageServer(webSocket);
-    } else {
-      webSocket.on('open', () => {
-        launchLanguageServer(webSocket);
+  await new Promise(resolve => {
+    server = app.listen(port, () => {
+      //  if (process.env.NODE_ENV === 'production')
+      log(`\n\nComposer now running at:\n\nhttp://localhost:${port}\n`);
+      const wss: ws.Server = new ws.Server({
+        noServer: true,
+        perMessageDeflate: false,
       });
-    }
-  });
 
-  attachLSPServer(wss, server, '/lu-language-server', webSocket => {
-    // launch language server when the web socket is opened
-    if (webSocket.readyState === webSocket.OPEN) {
-      launchLuLanguageServer(webSocket);
-    } else {
-      webSocket.on('open', () => {
-        launchLuLanguageServer(webSocket);
+      attachLSPServer(wss, server, '/lg-language-server', webSocket => {
+        // launch language server when the web socket is opened
+        if (webSocket.readyState === webSocket.OPEN) {
+          launchLanguageServer(webSocket);
+        } else {
+          webSocket.on('open', () => {
+            launchLanguageServer(webSocket);
+          });
+        }
       });
-    }
+
+      attachLSPServer(wss, server, '/lu-language-server', webSocket => {
+        // launch language server when the web socket is opened
+        if (webSocket.readyState === webSocket.OPEN) {
+          launchLuLanguageServer(webSocket);
+        } else {
+          webSocket.on('open', () => {
+            launchLuLanguageServer(webSocket);
+          });
+        }
+      });
+      resolve();
+    });
   });
 }
