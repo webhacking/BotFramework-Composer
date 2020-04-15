@@ -12,24 +12,27 @@ import { isWindows, isMac } from './utility/platform';
 import { getUnpackedAsarPath } from './utility/getUnpackedAsarPath';
 import ElectronWindow from './electronWindow';
 import logger, { log } from './utility/logger';
+import { parseDeepLinkUrl } from './utility/url';
+
 const error = logger.extend('error');
+let deeplinkingUrl: string = '';
 
-let deeplinkingUrl;
-
-function main() {
+async function main() {
   log('Starting electron app');
-
+  app.setAsDefaultProtocolClient('bfcomposer');
   const win = ElectronWindow.getInstance().browserWindow;
 
-  // and load the index.html of the app.
-  const CONTENT_URL = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
-  log('Loading project from: ', CONTENT_URL);
+  if (isWindows()) {
+    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1).toString());
+  }
 
-  log(`THE TRUTH IS ${deeplinkingUrl}`);
-
-  win.loadURL(CONTENT_URL);
+  if (!deeplinkingUrl) {
+    deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
+  }
+  await win.webContents.loadURL(deeplinkingUrl);
   win.maximize();
   win.show();
+  win.reload();
 }
 
 async function createAppDataDir() {
@@ -46,16 +49,18 @@ async function run() {
 
   const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
   if (gotTheLock) {
-    app.on('second-instance', (e, argv) => {
-      log('Inside second instance');
+    app.on('second-instance', async (e, argv) => {
       if (isWindows()) {
-        deeplinkingUrl = argv.slice(1);
+        deeplinkingUrl = argv.slice(1).toString();
       }
+
+      const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;
+      await browserWindow.webContents.loadURL(deeplinkingUrl);
       if (ElectronWindow.isBrowserWindowCreated) {
-        const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;
         if (browserWindow.isMinimized()) {
           browserWindow.restore();
         }
+        browserWindow.reload();
         browserWindow.focus();
       }
     });
@@ -80,8 +85,11 @@ async function run() {
   app.on('will-finish-launching', function() {
     app.on('open-url', function(event, url) {
       event.preventDefault();
-      deeplinkingUrl = url;
-      log(`Locked and loaded: ${deeplinkingUrl}`);
+      deeplinkingUrl = parseDeepLinkUrl(url);
+      if (ElectronWindow.isBrowserWindowCreated) {
+        const win = ElectronWindow.getInstance().browserWindow;
+        win.loadURL(deeplinkingUrl);
+      }
     });
   });
 
@@ -107,7 +115,7 @@ async function run() {
   await start(pluginsDir);
   log('Server started. Rendering application...');
 
-  main();
+  await main();
 }
 
 run()
