@@ -8,7 +8,8 @@ import { app, BrowserWindow } from 'electron';
 import fixPath from 'fix-path';
 
 import { isDevelopment } from './utility/env';
-import { isWindows, isMac } from './utility/platform';
+//isWindows
+import { isMac } from './utility/platform';
 import { getUnpackedAsarPath } from './utility/getUnpackedAsarPath';
 import ElectronWindow from './electronWindow';
 import logger, { log } from './utility/logger';
@@ -22,9 +23,11 @@ async function main() {
   app.setAsDefaultProtocolClient('bfcomposer');
   const win = ElectronWindow.getInstance().browserWindow;
 
-  if (isWindows()) {
-    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
-  }
+  log('Args', JSON.stringify(process.argv));
+  log('Args 2', JSON.stringify(process.argv.slice(1)));
+  // if (isWindows()) {
+  //   deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
+  // }
 
   if (!deeplinkingUrl) {
     deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
@@ -50,8 +53,15 @@ async function run() {
   const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
   if (gotTheLock) {
     app.on('second-instance', async () => {
-      if (isWindows()) {
-        deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
+      // if (isWindows()) {
+      //   deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
+      // }
+      log('Second instance');
+      log('Args Inside', JSON.stringify(process.argv));
+      log('Args 2 Inside', JSON.stringify(process.argv.slice(1)));
+
+      if (!deeplinkingUrl) {
+        deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
       }
 
       const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;

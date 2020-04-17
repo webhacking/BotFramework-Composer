@@ -9,7 +9,7 @@ const source = resolve(__dirname, '../../../plugins');
 console.log('[copy-plugins.js] Copying plugins from: ', source);
 
 let destination;
-switch (process.platform) {
+switch ('win32') {
   case 'darwin':
     const productName = electronBuildConfig.productName;
     destination = resolve(

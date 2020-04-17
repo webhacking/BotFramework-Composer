@@ -12,7 +12,7 @@ try {
   const electronBuilderBinary = resolve(__dirname, '../../../node_modules/.bin/electron-builder');
   const electronServerDir = resolve(__dirname, '..');
   let platform;
-  switch (process.platform) {
+  switch ('win32') {
     case 'darwin':
       platform = 'mac';
       break;
