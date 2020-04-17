@@ -15,7 +15,7 @@ import logger, { log } from './utility/logger';
 import { parseDeepLinkUrl } from './utility/url';
 
 const error = logger.extend('error');
-let deeplinkingUrl: string = '';
+let deeplinkingUrl = '';
 
 async function main() {
   log('Starting electron app');
@@ -23,7 +23,7 @@ async function main() {
   const win = ElectronWindow.getInstance().browserWindow;
 
   if (isWindows()) {
-    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1).toString());
+    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
   }
 
   if (!deeplinkingUrl) {
@@ -49,9 +49,9 @@ async function run() {
 
   const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
   if (gotTheLock) {
-    app.on('second-instance', async (e, argv) => {
+    app.on('second-instance', async () => {
       if (isWindows()) {
-        deeplinkingUrl = argv.slice(1).toString();
+        deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
       }
 
       const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;
