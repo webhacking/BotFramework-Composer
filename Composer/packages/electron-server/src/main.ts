@@ -34,8 +34,8 @@ async function main() {
   }
   await win.webContents.loadURL(deeplinkingUrl);
   win.maximize();
-  win.show();
   win.reload();
+  win.show();
 }
 
 async function createAppDataDir() {
@@ -83,11 +83,10 @@ async function run() {
     main();
   });
 
-  // Quit when all windows are closed.
-  app.on('window-all-closed', function() {
+  app.on('window-all-closed', () => {
     // On OS X it is common for applications and their menu bar
     // to stay active until the user quits explicitly with Cmd + Q
-    if (isMac()) {
+    if (!isMac()) {
       app.quit();
     }
   });
