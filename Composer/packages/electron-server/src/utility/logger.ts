@@ -14,7 +14,7 @@ export function log(arg1, arg2 = '') {
     ElectronWindow.getInstance().browserWindow.webContents.executeJavaScript(`console.log("${arg1} --- ${arg2}")`);
   }
   console.log(`${arg1} --- ${arg2}`);
-  fs.appendFile('helloworld.txt', `\n${arg1} --- ${arg2}`, function(err) {
+  fs.appendFile('Hellholeofaworld.txt', `\n${arg1} --- ${arg2}`, function(err) {
     if (err) return console.log(err);
   });
 }

@@ -9,7 +9,7 @@ import fixPath from 'fix-path';
 
 import { isDevelopment } from './utility/env';
 //isWindows
-import { isMac } from './utility/platform';
+import { isMac, isWindows } from './utility/platform';
 import { getUnpackedAsarPath } from './utility/getUnpackedAsarPath';
 import ElectronWindow from './electronWindow';
 import logger, { log } from './utility/logger';
@@ -23,18 +23,14 @@ async function main() {
   app.setAsDefaultProtocolClient('bfcomposer');
   const win = ElectronWindow.getInstance().browserWindow;
 
-  log('Args', JSON.stringify(process.argv));
-  log('Args 2', JSON.stringify(process.argv.slice(1)));
-  // if (isWindows()) {
-  //   deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
-  // }
-
-  if (!deeplinkingUrl) {
-    deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
+  win.webContents.openDevTools();
+  log(`Arsadasdasgs ${process.argv}`);
+  if (isWindows() && process.argv.length > 1) {
+    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1).toString());
   }
+  deeplinkingUrl += isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/' + deeplinkingUrl;
   await win.webContents.loadURL(deeplinkingUrl);
   win.maximize();
-  win.reload();
   win.show();
 }
 
@@ -52,13 +48,11 @@ async function run() {
 
   const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
   if (gotTheLock) {
-    app.on('second-instance', async () => {
-      // if (isWindows()) {
-      //   deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1));
-      // }
-      log('Second instance');
-      log('Args Inside', JSON.stringify(process.argv));
-      log('Args 2 Inside', JSON.stringify(process.argv.slice(1)));
+    app.on('second-instance', async (e, argv) => {
+      if (isWindows() && process.argv.length > 1) {
+        deeplinkingUrl = parseDeepLinkUrl(argv.slice(1).toString());
+      }
+      log(`Second instance Args Inside ${argv}`);
 
       if (!deeplinkingUrl) {
         deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
@@ -70,7 +64,6 @@ async function run() {
         if (browserWindow.isMinimized()) {
           browserWindow.restore();
         }
-        browserWindow.reload();
         browserWindow.focus();
       }
     });
