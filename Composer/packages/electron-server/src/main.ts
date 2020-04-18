@@ -7,7 +7,7 @@ import fixPath from 'fix-path';
 
 import { isDevelopment } from './utility/env';
 import { join, resolve } from 'path';
-import { isWindows } from './utility/platform';
+import { isWindows, isMac } from './utility/platform';
 import { getUnpackedAsarPath } from './utility/getUnpackedAsarPath';
 import ElectronWindow from './electronWindow';
 import logger, { log } from './utility/logger';
@@ -19,7 +19,7 @@ let deeplinkingUrl = '';
 
 function processArgsForWindows(args: string[]): string {
   if (process.argv.length > 1) {
-    return parseDeepLinkUrl(args.slice(1).toString());
+    return parseDeepLinkUrl(args[args.length - 1]);
   }
   return '';
 }
@@ -34,7 +34,7 @@ async function createAppDataDir() {
 }
 
 async function loadServer() {
-  let pluginsDir = ''; // let this be assigned by start() if in development
+  let pluginsDir = '';
   if (!isDevelopment) {
     // only change paths if packaged electron app
     const unpackedDir = getUnpackedAsarPath();
@@ -56,19 +56,20 @@ async function loadServer() {
 async function main() {
   const mainWindow = ElectronWindow.getInstance().browserWindow;
   if (mainWindow) {
-    mainWindow.webContents.openDevTools();
+    if (isDevelopment) {
+      mainWindow.webContents.openDevTools();
+    }
 
     if (isWindows()) {
       deeplinkingUrl = processArgsForWindows(process.argv);
     }
     await mainWindow.webContents.loadURL(baseUrl + deeplinkingUrl);
 
-    log('DeeplinkedUrl', deeplinkingUrl);
-
-    mainWindow.reload();
+    if (isMac()) {
+      mainWindow.reload();
+    }
     mainWindow.maximize();
     mainWindow.show();
-    // Emitted when the window is closed.
 
     mainWindow.on('closed', function() {
       ElectronWindow.destroy();
@@ -87,19 +88,18 @@ async function run() {
   // Force Single Instance Application
   const gotTheLock = app.requestSingleInstanceLock();
   if (gotTheLock) {
-    app.on('second-instance', (e, argv) => {
+    app.on('second-instance', async (e, argv) => {
       if (isWindows()) {
-        deeplinkingUrl = argv.slice(1).toString();
+        deeplinkingUrl = processArgsForWindows(argv);
       }
 
-      if (ElectronWindow.isBrowserWindowCreated) {
-        const mainWindow = ElectronWindow.getInstance().browserWindow;
-        if (mainWindow) {
-          if (mainWindow.isMinimized()) {
-            mainWindow.restore();
-          }
-          mainWindow.focus();
+      const mainWindow = ElectronWindow.getInstance().browserWindow;
+      if (mainWindow) {
+        await mainWindow.webContents.loadURL(baseUrl + deeplinkingUrl);
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
         }
+        mainWindow.focus();
       }
     });
   } else {
@@ -109,7 +109,7 @@ async function run() {
   app.on('ready', async () => {
     log('App ready');
     await loadServer();
-    log('Server loaded');
+    log('Server has been loaded');
     await main();
   });
 
