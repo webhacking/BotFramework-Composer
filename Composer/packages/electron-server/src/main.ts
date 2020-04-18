@@ -16,7 +16,14 @@ import logger, { log } from './utility/logger';
 import { parseDeepLinkUrl } from './utility/url';
 
 const error = logger.extend('error');
-let deeplinkingUrl = '';
+const baseUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
+
+function processArgsForWindows(args: string[]): string {
+  if (process.argv.length > 1) {
+    return parseDeepLinkUrl(args.slice(1).toString());
+  }
+  return '';
+}
 
 async function main() {
   log('Starting electron app');
@@ -24,12 +31,16 @@ async function main() {
   const win = ElectronWindow.getInstance().browserWindow;
 
   win.webContents.openDevTools();
-  log(`Arsadasdasgs ${process.argv}`);
-  if (isWindows() && process.argv.length > 1) {
-    deeplinkingUrl = parseDeepLinkUrl(process.argv.slice(1).toString());
+
+  let deeplinkingUrl = '';
+
+  if (isWindows()) {
+    deeplinkingUrl = processArgsForWindows(process.argv);
   }
-  deeplinkingUrl += isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/' + deeplinkingUrl;
+
+  deeplinkingUrl = baseUrl + deeplinkingUrl;
   await win.webContents.loadURL(deeplinkingUrl);
+  log('DeeplinkedUrl', deeplinkingUrl);
   win.maximize();
   win.show();
 }
@@ -49,23 +60,19 @@ async function run() {
   const gotTheLock = app.requestSingleInstanceLock(); // Force Single Instance Application
   if (gotTheLock) {
     app.on('second-instance', async (e, argv) => {
-      if (isWindows() && process.argv.length > 1) {
-        deeplinkingUrl = parseDeepLinkUrl(argv.slice(1).toString());
-      }
-      log(`Second instance Args Inside ${argv}`);
+      let deeplinkingUrl = '';
 
-      if (!deeplinkingUrl) {
-        deeplinkingUrl = isDevelopment ? 'http://localhost:3000/' : 'http://localhost:5000/';
+      if (isWindows()) {
+        deeplinkingUrl = processArgsForWindows(argv);
       }
+      deeplinkingUrl = baseUrl + deeplinkingUrl;
 
       const browserWindow: BrowserWindow = ElectronWindow.getInstance().browserWindow;
       await browserWindow.webContents.loadURL(deeplinkingUrl);
-      if (ElectronWindow.isBrowserWindowCreated) {
-        if (browserWindow.isMinimized()) {
-          browserWindow.restore();
-        }
-        browserWindow.focus();
+      if (browserWindow.isMinimized()) {
+        browserWindow.restore();
       }
+      browserWindow.focus();
     });
   } else {
     app.quit();
@@ -87,7 +94,7 @@ async function run() {
   app.on('will-finish-launching', function() {
     app.on('open-url', function(event, url) {
       event.preventDefault();
-      deeplinkingUrl = parseDeepLinkUrl(url);
+      const deeplinkingUrl = baseUrl + parseDeepLinkUrl(url);
       if (ElectronWindow.isBrowserWindowCreated) {
         const win = ElectronWindow.getInstance().browserWindow;
         win.loadURL(deeplinkingUrl);
