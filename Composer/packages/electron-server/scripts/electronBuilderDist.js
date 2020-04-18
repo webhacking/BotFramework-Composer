@@ -13,7 +13,7 @@ try {
   const electronServerDir = resolve(__dirname, '..');
   let platform;
   let unpackedAppDir;
-  switch ('win32') {
+  switch (process.platform) {
     case 'darwin':
       platform = 'mac';
       unpackedAppDir = 'dist/mac';

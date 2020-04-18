@@ -11,7 +11,10 @@ export default debug('composer');
 
 export function log(arg1, arg2 = '') {
   if (ElectronWindow.isBrowserWindowCreated) {
-    ElectronWindow.getInstance().browserWindow.webContents.executeJavaScript(`console.log("${arg1} --- ${arg2}")`);
+    const browserWindow = ElectronWindow.getInstance().browserWindow;
+    if (browserWindow) {
+      browserWindow.webContents.executeJavaScript(`console.log("${arg1} --- ${arg2}")`);
+    }
   }
   console.log(`${arg1} --- ${arg2}`);
   fs.appendFile('Hellholeofaworld.txt', `\n${arg1} --- ${arg2}`, function(err) {
